@@ -20,7 +20,10 @@ export function CalendarPageClient({
   const [search, setSearch] = useState("");
   return (
     <AppShell search={search} onSearchChange={setSearch} orgCount={orgCount} conflictCount={conflictCount}>
-      <CalendarView events={events} organizations={organizations.map((o) => o.name)} />
+      <CalendarView
+        events={events}
+        organizations={organizations.map((o) => ({ name: o.name, acronym: o.acronym }))}
+      />
     </AppShell>
   );
 }

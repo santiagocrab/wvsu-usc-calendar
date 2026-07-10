@@ -9,6 +9,7 @@ import {
 import { ChevronLeft, ChevronRight, List, LayoutGrid, Columns } from "lucide-react";
 import type { EventDTO } from "@/lib/events";
 import { eventOccursOnDate, filterEvents } from "@/lib/events";
+import type { OrgRef } from "@/lib/org-matching";
 import { CATEGORY_META, CATEGORIES, AY_MONTHS } from "@/lib/constants";
 import { CategoryBadge } from "./category-badge";
 import { StatusBadge } from "./status-badge";
@@ -24,7 +25,7 @@ export function CalendarView({
   organizations,
 }: {
   events: EventDTO[];
-  organizations: string[];
+  organizations: OrgRef[];
 }) {
   const searchParams = useSearchParams();
   const initialOrg = searchParams.get("org") ?? "all";
@@ -53,8 +54,8 @@ export function CalendarView({
       search, category,
       organization: organization === "all" ? undefined : organization,
       location: location === "all" ? undefined : location,
-    }),
-    [events, search, category, organization, location]
+    }, organizations),
+    [events, search, category, organization, location, organizations]
   );
 
   const monthDays = useMemo(() => {
@@ -75,9 +76,22 @@ export function CalendarView({
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [filtered, selectedDay]);
 
+  const activeOrg = organization !== "all"
+    ? organizations.find((o) => o.name === organization)
+    : undefined;
+
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <NoticeBanner />
+
+      {activeOrg && (
+        <div className="usc-card px-4 py-3 sm:px-5 dark:bg-[#252220] border-usc-gold/30">
+          <p className="text-sm font-semibold text-usc-black dark:text-[#F5F0E8]">
+            Showing events for <span className="text-usc-gold-dark dark:text-usc-gold">{activeOrg.name}</span>
+            <span className="text-usc-muted dark:text-white/50 font-medium"> · {filtered.length} events</span>
+          </p>
+        </div>
+      )}
 
       <div className="usc-card p-4 sm:p-5 dark:bg-[#252220]">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
@@ -112,7 +126,7 @@ export function CalendarView({
           </select>
           <select value={organization} onChange={(e) => setOrganization(e.target.value)} className="px-3 py-2.5 rounded-xl border border-usc-border text-sm font-semibold bg-white dark:bg-[#2A2724] dark:text-[#F2EDE6]">
             <option value="all">All Organizations</option>
-            {organizations.map((o) => <option key={o} value={o}>{o}</option>)}
+            {organizations.map((o) => <option key={o.name} value={o.name}>{o.name}</option>)}
           </select>
           <select value={location} onChange={(e) => setLocation(e.target.value)} className="px-3 py-2.5 rounded-xl border border-usc-border text-sm font-semibold bg-white dark:bg-[#2A2724] dark:text-[#F2EDE6]">
             <option value="all">All Locations</option>

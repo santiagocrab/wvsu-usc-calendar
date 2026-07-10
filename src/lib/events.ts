@@ -1,6 +1,7 @@
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import type { Event } from "@/generated/prisma/client";
 import { CATEGORY_META } from "./constants";
+import { eventMatchesOrg, findOrgByName, type OrgRef } from "./org-matching";
 
 export type EventDTO = {
   id: string;
@@ -87,7 +88,8 @@ export function filterEvents(
     location?: string;
     status?: string;
     month?: string;
-  }
+  },
+  organizations?: OrgRef[]
 ): EventDTO[] {
   const search = filters.search?.toLowerCase().trim();
   const month = filters.month;
@@ -113,12 +115,19 @@ export function filterEvents(
       return false;
     }
     if (filters.organization && filters.organization !== "all") {
-      const org = filters.organization.toLowerCase();
-      if (
-        !event.organization.toLowerCase().includes(org) &&
-        !event.host.toLowerCase().includes(org)
-      ) {
-        return false;
+      const orgRef = organizations
+        ? findOrgByName(organizations, filters.organization)
+        : undefined;
+      if (orgRef) {
+        if (!eventMatchesOrg(event, orgRef)) return false;
+      } else {
+        const org = filters.organization.toLowerCase();
+        if (
+          !event.organization.toLowerCase().includes(org) &&
+          !event.host.toLowerCase().includes(org)
+        ) {
+          return false;
+        }
       }
     }
     if (filters.location && filters.location !== "all") {
