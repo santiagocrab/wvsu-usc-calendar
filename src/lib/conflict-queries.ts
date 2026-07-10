@@ -1,14 +1,26 @@
 import { getPrisma } from "@/lib/prisma";
 import { serializeEvent, type EventDTO } from "@/lib/events";
-import { classifyEvent } from "@/lib/event-classification";
+import { classifyEvent, enrichEventWithClassification } from "@/lib/event-classification";
 import {
   detectConflicts,
   getConflictCounters,
   getConflictEventIds,
   type Conflict,
   type ConflictFilter,
+  type ConflictSeverity,
   matchesConflictFilter,
 } from "@/lib/conflicts";
+
+const SEVERITY_RANK: Record<ConflictSeverity, number> = { high: 0, medium: 1, low: 2 };
+const BATCH_SIZE = 40;
+
+function sortConflicts(conflicts: Conflict[]): Conflict[] {
+  return [...conflicts].sort(
+    (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+      (a.date ?? "").localeCompare(b.date ?? "")
+  );
+}
 
 function toConflictRecord(
   row: {
@@ -26,7 +38,8 @@ function toConflictRecord(
     eventA: Parameters<typeof serializeEvent>[0];
     eventB: Parameters<typeof serializeEvent>[0];
   }
-): Conflict {
+): Conflict | null {
+  if (!row.eventA || !row.eventB) return null;
   const eventA = serializeEvent(row.eventA);
   const eventB = serializeEvent(row.eventB);
   let reasons: string[] = [];
@@ -62,18 +75,33 @@ export async function getStoredConflicts(filters?: ConflictFilter[]): Promise<Co
   const prisma = getPrisma();
   const rows = await prisma.eventConflict.findMany({
     include: { eventA: true, eventB: true },
-    orderBy: [{ severity: "asc" }, { updatedAt: "desc" }],
+    orderBy: { updatedAt: "desc" },
   });
 
-  let conflicts = rows.map(toConflictRecord);
+  let conflicts = rows
+    .map(toConflictRecord)
+    .filter((c): c is Conflict => c !== null);
+
   if (filters?.length) {
     conflicts = conflicts.filter((c) => filters.some((f) => matchesConflictFilter(c, f)));
   }
-  return conflicts;
+  return sortConflicts(conflicts);
 }
 
-export async function getConflictSummary() {
-  const conflicts = await getStoredConflicts();
+export function computeLiveConflicts(events: EventDTO[]): Conflict[] {
+  const classified = events.map((e) => enrichEventWithClassification(e));
+  return sortConflicts(detectConflicts(classified));
+}
+
+async function loadClassifiedEvents(): Promise<EventDTO[]> {
+  const prisma = getPrisma();
+  const events = await prisma.event.findMany({
+    orderBy: [{ startDate: "asc" }, { title: "asc" }],
+  });
+  return events.map((e) => enrichEventWithClassification(serializeEvent(e)));
+}
+
+function buildSummary(conflicts: Conflict[], source: "stored" | "live", eventCount: number) {
   const counters = getConflictCounters(conflicts);
   return {
     conflicts,
@@ -85,7 +113,28 @@ export async function getConflictSummary() {
     ),
     conflictEventIds: getConflictEventIds(conflicts),
     count: counters.defaultView,
+    source,
+    eventCount,
+    persisted: source === "stored",
   };
+}
+
+export async function getConflictSummary() {
+  const prisma = getPrisma();
+  const eventCount = await prisma.event.count();
+
+  try {
+    const stored = await getStoredConflicts();
+    if (stored.length > 0 || eventCount === 0) {
+      return buildSummary(stored, "stored", eventCount);
+    }
+  } catch {
+    // Table may not exist yet — fall through to live compute.
+  }
+
+  const classified = await loadClassifiedEvents();
+  const live = computeLiveConflicts(classified);
+  return buildSummary(live, "live", eventCount);
 }
 
 export async function recalculateConflicts(): Promise<{
@@ -95,17 +144,25 @@ export async function recalculateConflicts(): Promise<{
   total: number;
 }> {
   const prisma = getPrisma();
-  const events = (await prisma.event.findMany()).map(serializeEvent);
+  const rawEvents = await prisma.event.findMany();
+  const classifiedEvents: EventDTO[] = [];
 
-  for (const event of events) {
-    const classification = classifyEvent(event);
-    await prisma.event.update({
-      where: { id: event.id },
-      data: classification,
-    });
+  for (let i = 0; i < rawEvents.length; i += BATCH_SIZE) {
+    const chunk = rawEvents.slice(i, i + BATCH_SIZE);
+    await prisma.$transaction(
+      chunk.map((row) => {
+        const dto = serializeEvent(row);
+        const classification = classifyEvent(dto);
+        const enriched = { ...dto, ...classification };
+        classifiedEvents.push(enriched);
+        return prisma.event.update({
+          where: { id: row.id },
+          data: classification,
+        });
+      })
+    );
   }
 
-  const classifiedEvents = (await prisma.event.findMany()).map(serializeEvent);
   const detected = detectConflicts(classifiedEvents);
   const eventMap = new Map(classifiedEvents.map((e) => [e.id, e]));
 
@@ -140,16 +197,11 @@ export async function recalculateConflicts(): Promise<{
     },
   });
 
-  let created = 0;
-  let preserved = preservedKeys.size;
-
-  for (const conflict of detected) {
-    if (preservedKeys.has(conflict.pairKey)) continue;
-
-    const [eventA, eventB] = conflict.events;
-    await prisma.eventConflict.upsert({
-      where: { pairKey: conflict.pairKey },
-      create: {
+  const toCreate = detected
+    .filter((c) => !preservedKeys.has(c.pairKey))
+    .map((conflict) => {
+      const [eventA, eventB] = conflict.events;
+      return {
         eventAId: eventA.id,
         eventBId: eventB.id,
         conflictType: conflict.type,
@@ -161,33 +213,25 @@ export async function recalculateConflicts(): Promise<{
         isAutoGenerated: true,
         eventAUpdatedAt: new Date(eventA.updatedAt),
         eventBUpdatedAt: new Date(eventB.updatedAt),
-      },
-      update: {
-        conflictType: conflict.type,
-        severity: conflict.severity,
-        reasons: JSON.stringify(conflict.reasons),
-        recommendation: conflict.recommendation,
-        isAutoGenerated: true,
-        eventAUpdatedAt: new Date(eventA.updatedAt),
-        eventBUpdatedAt: new Date(eventB.updatedAt),
-      },
+      };
     });
-    created++;
+
+  let created = 0;
+  for (let i = 0; i < toCreate.length; i += BATCH_SIZE) {
+    const batch = toCreate.slice(i, i + BATCH_SIZE);
+    const result = await prisma.eventConflict.createMany({ data: batch });
+    created += result.count;
   }
 
   const total = await prisma.eventConflict.count();
-  return { deleted: deleteResult.count, created, preserved, total };
+  return { deleted: deleteResult.count, created, preserved: preservedKeys.size, total };
 }
 
 export async function getEventsForConflictEngine(): Promise<EventDTO[]> {
-  const prisma = getPrisma();
-  const events = await prisma.event.findMany({
-    orderBy: [{ startDate: "asc" }, { title: "asc" }],
-  });
-  return events.map(serializeEvent);
+  return loadClassifiedEvents();
 }
 
-/** Nav badge: unresolved high + medium conflicts from persisted store. */
+/** Nav badge: unresolved high + medium conflicts. */
 export async function getConflictBadgeCount(): Promise<number> {
   try {
     const summary = await getConflictSummary();

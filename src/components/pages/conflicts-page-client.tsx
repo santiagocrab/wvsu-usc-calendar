@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { ShieldAlert, Check, X, Link2, RefreshCw, ChevronDown } from "lucide-react";
@@ -51,6 +52,9 @@ export function ConflictsPageClient({
   counters,
   orgCount,
   isAdmin,
+  source = "stored",
+  eventCount = 0,
+  dbError = null,
 }: {
   conflicts: Conflict[];
   counters: {
@@ -64,7 +68,11 @@ export function ConflictsPageClient({
   };
   orgCount: number;
   isAdmin: boolean;
+  source?: "stored" | "live";
+  eventCount?: number;
+  dbError?: string | null;
 }) {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<ConflictFilter | "priority">("priority");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
@@ -89,31 +97,40 @@ export function ConflictsPageClient({
 
   const badgeCount = counters.defaultView;
 
+  function refreshAfterAction() {
+    router.refresh();
+  }
+
   function handleResolve(conflictId: string, status: ResolutionStatus) {
     startTransition(async () => {
-      await resolveConflictAction(conflictId, status, notes[conflictId] ?? "");
+      const result = await resolveConflictAction(conflictId, status, notes[conflictId] ?? "");
+      if (result.success) refreshAfterAction();
     });
   }
 
   function handleSeverity(conflictId: string, severity: ConflictSeverity) {
     startTransition(async () => {
-      await changeConflictSeverityAction(conflictId, severity);
+      const result = await changeConflictSeverityAction(conflictId, severity);
+      if (result.success) refreshAfterAction();
     });
   }
 
   function handleLinkRelated(childId: string, parentId: string, relationType: string) {
     startTransition(async () => {
-      await linkRelatedEventsAction(childId, parentId, relationType);
+      const result = await linkRelatedEventsAction(childId, parentId, relationType);
+      if (result.success) refreshAfterAction();
     });
   }
 
   function handleRecalculate() {
     startTransition(async () => {
+      setRecalcMessage("Recalculating conflicts… this may take a minute.");
       const result = await recalculateConflictsAction();
       if (result.success && result.stats) {
         setRecalcMessage(
-          `Recalculated: ${result.stats.created} updated, ${result.stats.total} total in database.`
+          `Done: ${result.stats.created} conflicts saved, ${result.stats.total} total in database.`
         );
+        refreshAfterAction();
       } else {
         setRecalcMessage(result.error ?? "Recalculation failed.");
       }
@@ -134,8 +151,16 @@ export function ConflictsPageClient({
               </h1>
               <p className="text-sm text-usc-muted mt-2">
                 {counters.defaultView} priority conflicts (high + medium, unresolved) ·{" "}
-                {counters.total} total stored
+                {counters.total} total · {eventCount} events scanned
               </p>
+              {source === "live" && eventCount > 0 && (
+                <p className="text-xs text-usc-coral font-semibold mt-2">
+                  Showing live analysis — sign in as admin and click Recalculate to save results.
+                </p>
+              )}
+              {dbError && (
+                <p className="text-xs text-usc-coral font-semibold mt-2">{dbError}</p>
+              )}
             </div>
             {isAdmin && (
               <button
@@ -198,9 +223,19 @@ export function ConflictsPageClient({
 
         <div className="space-y-4">
           {filtered.length === 0 ? (
-            <p className="text-center text-usc-muted py-12 font-medium">
-              No conflicts match this filter. Looking good!
-            </p>
+            <div className="text-center text-usc-muted py-12 font-medium space-y-2">
+              <p>No conflicts match this filter.</p>
+              {eventCount === 0 && (
+                <p className="text-sm text-usc-coral">
+                  No events found in the database. Restore calendar data first.
+                </p>
+              )}
+              {eventCount > 0 && counters.total === 0 && isAdmin && (
+                <p className="text-sm">
+                  Click <strong>Recalculate</strong> above to scan {eventCount} events and save conflicts.
+                </p>
+              )}
+            </div>
           ) : (
             filtered.map((conflict) => (
               <ConflictCard
@@ -208,6 +243,7 @@ export function ConflictsPageClient({
                 conflict={conflict}
                 severityStyles={severityStyles}
                 isAdmin={isAdmin}
+                source={source}
                 pending={pending}
                 notes={notes[conflict.id ?? ""] ?? ""}
                 onNotesChange={(v) =>
@@ -233,6 +269,7 @@ function ConflictCard({
   conflict,
   severityStyles,
   isAdmin,
+  source,
   pending,
   notes,
   onNotesChange,
@@ -243,6 +280,7 @@ function ConflictCard({
   conflict: Conflict;
   severityStyles: Record<ConflictSeverity, string>;
   isAdmin: boolean;
+  source: "stored" | "live";
   pending: boolean;
   notes: string;
   onNotesChange: (v: string) => void;
@@ -329,7 +367,7 @@ function ConflictCard({
         ))}
       </div>
 
-      {isAdmin && conflictId && conflict.resolutionStatus === "unresolved" && (
+      {isAdmin && conflictId && source === "stored" && conflict.resolutionStatus === "unresolved" && (
         <div className="mt-4 pt-4 border-t border-usc-border/60 space-y-3">
           <textarea
             value={notes}

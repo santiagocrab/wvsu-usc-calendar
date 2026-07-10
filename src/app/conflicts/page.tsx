@@ -18,6 +18,9 @@ export default async function ConflictsPage() {
   };
   let orgCount = 0;
   let isAdmin = false;
+  let source: "stored" | "live" = "live";
+  let eventCount = 0;
+  let dbError: string | null = null;
 
   try {
     const [summary, orgs, authed] = await Promise.all([
@@ -29,8 +32,13 @@ export default async function ConflictsPage() {
     counters = summary.counters;
     orgCount = orgs.length;
     isAdmin = authed;
-  } catch {
-    /* db */
+    source = summary.source;
+    eventCount = summary.eventCount;
+  } catch (error) {
+    dbError =
+      error instanceof Error
+        ? error.message
+        : "Could not load conflicts. Run database migrations.";
   }
 
   return (
@@ -39,6 +47,9 @@ export default async function ConflictsPage() {
       counters={counters}
       orgCount={orgCount}
       isAdmin={isAdmin}
+      source={source}
+      eventCount={eventCount}
+      dbError={dbError}
     />
   );
 }
