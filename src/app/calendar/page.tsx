@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { getEvents } from "@/lib/queries";
 import { getOrganizations } from "@/lib/organizations";
-import { detectConflicts } from "@/lib/conflicts";
+import { getConflictBadgeCount } from "@/lib/conflict-queries";
 import { CalendarPageClient } from "@/components/pages/calendar-page-client";
 
 export default async function CalendarPage() {
@@ -13,7 +13,7 @@ export default async function CalendarPage() {
 
   try {
     [events, orgs] = await Promise.all([getEvents(), getOrganizations()]);
-    conflictCount = detectConflicts(events).length;
+    conflictCount = await getConflictBadgeCount();
   } catch { /* db */ }
 
   return (

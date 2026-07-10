@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { getEvents, getUpcomingEvents } from "@/lib/queries";
 import { getOrganizations } from "@/lib/organizations";
-import { detectConflicts } from "@/lib/conflicts";
+import { getConflictBadgeCount } from "@/lib/conflict-queries";
 import { HomePageClient } from "@/components/pages/home-page-client";
 
 export default async function HomePage() {
@@ -13,7 +13,7 @@ export default async function HomePage() {
 
   try {
     [events, upcoming, orgs] = await Promise.all([getEvents(), getUpcomingEvents(8), getOrganizations()]);
-    conflictCount = detectConflicts(events).length;
+    conflictCount = await getConflictBadgeCount();
   } catch { /* db */ }
 
   return (

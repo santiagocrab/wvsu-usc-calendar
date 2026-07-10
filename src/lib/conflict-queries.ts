@@ -186,3 +186,22 @@ export async function getEventsForConflictEngine(): Promise<EventDTO[]> {
   });
   return events.map(serializeEvent);
 }
+
+/** Nav badge: unresolved high + medium conflicts from persisted store. */
+export async function getConflictBadgeCount(): Promise<number> {
+  try {
+    const summary = await getConflictSummary();
+    return summary.count;
+  } catch {
+    return 0;
+  }
+}
+
+export async function getConflictEventIdList(): Promise<string[]> {
+  try {
+    const summary = await getConflictSummary();
+    return Array.from(summary.conflictEventIds);
+  } catch {
+    return [];
+  }
+}

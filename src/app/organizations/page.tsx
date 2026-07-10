@@ -2,27 +2,30 @@ export const dynamic = "force-dynamic";
 
 import { getEvents } from "@/lib/queries";
 import { getOrganizations } from "@/lib/organizations";
-import { detectConflicts } from "@/lib/conflicts";
+import { getConflictBadgeCount, getConflictEventIdList } from "@/lib/conflict-queries";
 import { OrganizationsPageClient } from "@/components/pages/organizations-page-client";
 
 export default async function OrganizationsPage() {
   let events: Awaited<ReturnType<typeof getEvents>> = [];
   let orgs: Awaited<ReturnType<typeof getOrganizations>> = [];
-  let conflicts: ReturnType<typeof detectConflicts> = [];
+  let conflictEventIds: string[] = [];
+  let conflictCount = 0;
 
   try {
-    [events, orgs] = await Promise.all([getEvents(), getOrganizations()]);
-    conflicts = detectConflicts(events);
+    [events, orgs, conflictEventIds, conflictCount] = await Promise.all([
+      getEvents(),
+      getOrganizations(),
+      getConflictEventIdList(),
+      getConflictBadgeCount(),
+    ]);
   } catch { /* db */ }
-
-  const conflictEventIds = conflicts.flatMap((c) => c.events.map((e) => e.id));
 
   return (
     <OrganizationsPageClient
       events={events}
       organizations={orgs}
       conflictEventIds={conflictEventIds}
-      conflictCount={conflicts.length}
+      conflictCount={conflictCount}
     />
   );
 }

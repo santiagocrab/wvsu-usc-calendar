@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { isAdminAuthenticated, setAdminSession, clearAdminSession, verifyPassword } from "@/lib/auth";
-import { generateEventId } from "@/lib/events";
+import { generateEventId, type EventDTO } from "@/lib/events";
+import { classifyEvent } from "@/lib/event-classification";
 
 export type EventFormData = {
   title: string;
@@ -28,6 +29,42 @@ export type EventFormData = {
 
 function parseDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
+}
+
+function formToDto(data: EventFormData, id: string): EventDTO {
+  return {
+    id,
+    title: data.title.trim(),
+    category: data.category,
+    host: data.host.trim(),
+    organization: data.organization.trim(),
+    eventType: data.eventType,
+    status: data.status,
+    startDate: data.startDate,
+    endDate: data.endDate,
+    startTime: data.startTime?.trim() ?? "",
+    endTime: data.endTime?.trim() ?? "",
+    location: data.location.trim(),
+    mapLink: data.mapLink?.trim() ?? "",
+    targetParticipants: data.targetParticipants?.trim() ?? "",
+    description: data.description?.trim() ?? "",
+    contactPerson: data.contactPerson?.trim() ?? "",
+    sourceFile: data.sourceFile?.trim() ?? "",
+    remarks: data.remarks?.trim() ?? "",
+    isMajorBlockingEvent: false,
+    conflictEligible: true,
+    dateType: "exact",
+    deliveryMode: "unspecified",
+    recordType: "event",
+    parentEventId: null,
+    relationType: "independent",
+    participationRequired: false,
+    venueNormalized: "",
+    hostNormalized: "",
+    targetGroupNormalized: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 function validateEventData(data: EventFormData): string | null {
@@ -80,26 +117,31 @@ export async function createEvent(data: EventFormData): Promise<{ success: boole
     if (validationError) return { success: false, error: validationError };
 
     const prisma = getPrisma();
+    const baseData = {
+      title: data.title.trim(),
+      category: data.category,
+      host: data.host.trim(),
+      organization: data.organization.trim(),
+      eventType: data.eventType,
+      status: data.status,
+      startDate: parseDate(data.startDate),
+      endDate: parseDate(data.endDate),
+      startTime: data.startTime?.trim() ?? "",
+      endTime: data.endTime?.trim() ?? "",
+      location: data.location.trim(),
+      mapLink: data.mapLink?.trim() ?? "",
+      targetParticipants: data.targetParticipants?.trim() ?? "",
+      description: data.description?.trim() ?? "",
+      contactPerson: data.contactPerson?.trim() ?? "",
+      sourceFile: data.sourceFile?.trim() ?? "",
+      remarks: data.remarks?.trim() ?? "",
+    };
+    const classification = classifyEvent(formToDto(data, "new"));
     const event = await prisma.event.create({
       data: {
         id: generateEventId(),
-        title: data.title.trim(),
-        category: data.category,
-        host: data.host.trim(),
-        organization: data.organization.trim(),
-        eventType: data.eventType,
-        status: data.status,
-        startDate: parseDate(data.startDate),
-        endDate: parseDate(data.endDate),
-        startTime: data.startTime?.trim() ?? "",
-        endTime: data.endTime?.trim() ?? "",
-        location: data.location.trim(),
-        mapLink: data.mapLink?.trim() ?? "",
-        targetParticipants: data.targetParticipants?.trim() ?? "",
-        description: data.description?.trim() ?? "",
-        contactPerson: data.contactPerson?.trim() ?? "",
-        sourceFile: data.sourceFile?.trim() ?? "",
-        remarks: data.remarks?.trim() ?? "",
+        ...baseData,
+        ...classification,
       },
     });
 
@@ -126,26 +168,31 @@ export async function updateEvent(
     if (validationError) return { success: false, error: validationError };
 
     const prisma = getPrisma();
+    const baseData = {
+      title: data.title.trim(),
+      category: data.category,
+      host: data.host.trim(),
+      organization: data.organization.trim(),
+      eventType: data.eventType,
+      status: data.status,
+      startDate: parseDate(data.startDate),
+      endDate: parseDate(data.endDate),
+      startTime: data.startTime?.trim() ?? "",
+      endTime: data.endTime?.trim() ?? "",
+      location: data.location.trim(),
+      mapLink: data.mapLink?.trim() ?? "",
+      targetParticipants: data.targetParticipants?.trim() ?? "",
+      description: data.description?.trim() ?? "",
+      contactPerson: data.contactPerson?.trim() ?? "",
+      sourceFile: data.sourceFile?.trim() ?? "",
+      remarks: data.remarks?.trim() ?? "",
+    };
+    const classification = classifyEvent(formToDto(data, id));
     await prisma.event.update({
       where: { id },
       data: {
-        title: data.title.trim(),
-        category: data.category,
-        host: data.host.trim(),
-        organization: data.organization.trim(),
-        eventType: data.eventType,
-        status: data.status,
-        startDate: parseDate(data.startDate),
-        endDate: parseDate(data.endDate),
-        startTime: data.startTime?.trim() ?? "",
-        endTime: data.endTime?.trim() ?? "",
-        location: data.location.trim(),
-        mapLink: data.mapLink?.trim() ?? "",
-        targetParticipants: data.targetParticipants?.trim() ?? "",
-        description: data.description?.trim() ?? "",
-        contactPerson: data.contactPerson?.trim() ?? "",
-        sourceFile: data.sourceFile?.trim() ?? "",
-        remarks: data.remarks?.trim() ?? "",
+        ...baseData,
+        ...classification,
       },
     });
 

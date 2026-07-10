@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { AdminEventsPageClient } from "@/components/pages/admin-events-page-client";
 import { getEvents } from "@/lib/queries";
 import { getOrganizations } from "@/lib/organizations";
-import { detectConflicts } from "@/lib/conflicts";
+import { getConflictBadgeCount } from "@/lib/conflict-queries";
 
 export default async function AdminEventsPage() {
   let events: Awaited<ReturnType<typeof getEvents>> = [];
@@ -14,7 +14,7 @@ export default async function AdminEventsPage() {
     const [evts, orgs] = await Promise.all([getEvents(), getOrganizations()]);
     events = evts;
     orgCount = orgs.length;
-    conflictCount = detectConflicts(evts).length;
+    conflictCount = await getConflictBadgeCount();
   } catch {
     // Database not configured
   }

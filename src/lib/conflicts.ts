@@ -311,12 +311,12 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
     }
   }
 
-  // Both TBA — schedule verification only
-  if (bothBroadVenue && sameCalendarDay(a, b) && !hostMatch) {
+  // Both TBA — schedule verification only when host or participants overlap
+  if (bothBroadVenue && sameCalendarDay(a, b) && (hostMatch || participantMatch)) {
     candidates.push({
       conflictType: "schedule_verification",
       severity: "low",
-      reason: "Both events share a date with unspecified venues.",
+      reason: "Same date with unspecified venues and overlapping host or participants.",
       recommendation: "Confirm venues and times before treating as a conflict.",
     });
   }
