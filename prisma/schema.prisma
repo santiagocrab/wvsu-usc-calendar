@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Event {
+  id                 String   @id
+  title              String
+  category           String
+  host               String
+  organization       String
+  eventType          String
+  status             String
+  startDate          DateTime @db.Date
+  endDate            DateTime @db.Date
+  startTime          String   @default("")
+  endTime            String   @default("")
+  location           String
+  mapLink            String   @default("")
+  targetParticipants String   @default("")
+  description        String   @default("")
+  contactPerson      String   @default("")
+  sourceFile         String   @default("")
+  remarks            String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([startDate])
+  @@index([category])
+  @@index([status])
+  @@index([organization])
+}
