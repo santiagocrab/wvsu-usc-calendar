@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth,
@@ -35,6 +35,10 @@ export function CalendarView({
   const [organization, setOrganization] = useState(initialOrg);
   const [location, setLocation] = useState("all");
   const [selectedEvent, setSelectedEvent] = useState<EventDTO | null>(null);
+
+  useEffect(() => {
+    setOrganization(initialOrg);
+  }, [initialOrg]);
 
   const locations = useMemo(() => {
     const s = new Set<string>();

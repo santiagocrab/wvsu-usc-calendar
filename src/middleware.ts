@@ -4,7 +4,7 @@ import { verifySessionToken } from "@/lib/session";
 
 const SESSION_COOKIE = "wvsu_usc_admin_session";
 
-export async function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!pathname.startsWith("/admin")) {
