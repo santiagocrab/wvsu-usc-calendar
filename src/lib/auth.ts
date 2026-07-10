@@ -6,7 +6,7 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 export async function setAdminSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, createSessionToken(), {
+  cookieStore.set(SESSION_COOKIE, await createSessionToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
