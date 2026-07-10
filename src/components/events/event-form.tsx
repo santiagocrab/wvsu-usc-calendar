@@ -6,7 +6,6 @@ import { CATEGORIES, EVENT_TYPES, STATUSES } from "@/lib/constants";
 import { getCategoryStyle } from "@/lib/events";
 import type { EventFormData } from "@/actions/events";
 import { createEvent, updateEvent } from "@/actions/events";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -287,12 +286,20 @@ export function EventForm({
       </Card>
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : mode === "create" ? "Create Event" : "Save Changes"}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => router.push("/admin/events")}>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="px-5 py-2.5 rounded-full bg-usc-gold text-usc-black font-bold hover:bg-usc-gold-dark hover:text-white transition disabled:opacity-50"
+        >
+          {isPending ? "Saving…" : mode === "create" ? "Create event" : "Save changes"}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/events")}
+          className="px-5 py-2.5 rounded-full border border-usc-border font-semibold hover:bg-usc-gold-wash dark:hover:bg-white/5 transition"
+        >
           Cancel
-        </Button>
+        </button>
       </div>
     </form>
   );

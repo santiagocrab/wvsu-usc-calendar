@@ -9,9 +9,16 @@ import { deleteOrganization, type OrganizationFormData } from "@/actions/organiz
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function AdminOrganizationsTable({ organizations }: { organizations: OrganizationDTO[] }) {
+export function AdminOrganizationsTable({
+  organizations,
+  search: externalSearch,
+}: {
+  organizations: OrganizationDTO[];
+  search?: string;
+}) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [internalSearch, setInternalSearch] = useState("");
+  const search = externalSearch ?? internalSearch;
   const [isPending, startTransition] = useTransition();
 
   const filtered = organizations.filter((o) => {
@@ -29,7 +36,9 @@ export function AdminOrganizationsTable({ organizations }: { organizations: Orga
 
   return (
     <div className="space-y-4">
-      <Input placeholder="Search organizations…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      {externalSearch === undefined && (
+        <Input placeholder="Search organizations…" value={internalSearch} onChange={(e) => setInternalSearch(e.target.value)} />
+      )}
       <div className="overflow-hidden rounded-2xl border border-usc-border bg-white dark:bg-[#252220]">
         <table className="w-full text-sm">
           <thead className="bg-usc-warm dark:bg-[#2A2724] text-left text-xs uppercase text-usc-muted">

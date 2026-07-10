@@ -67,10 +67,10 @@ export function AdminEventsTable({ events }: { events: EventDTO[] }) {
         </Select>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-usc-border bg-white dark:bg-[#252220]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="bg-usc-warm dark:bg-[#2A2724] text-left text-xs uppercase text-usc-muted">
               <tr>
                 <th className="px-4 py-3">Event</th>
                 <th className="px-4 py-3">Date</th>
@@ -82,18 +82,18 @@ export function AdminEventsTable({ events }: { events: EventDTO[] }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-10 text-center text-usc-muted">
                     No events found.
                   </td>
                 </tr>
               ) : (
                 filtered.map((event) => (
-                  <tr key={event.id} className="border-t border-slate-100 hover:bg-slate-50/50">
+                  <tr key={event.id} className="border-t border-usc-border hover:bg-usc-gold-wash/30 dark:hover:bg-white/5">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">{event.title}</p>
-                      <p className="text-xs text-slate-500">{event.organization}</p>
+                      <p className="font-semibold text-usc-black dark:text-[#F5F0E8]">{event.title}</p>
+                      <p className="text-xs text-usc-muted">{event.organization}</p>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-usc-charcoal dark:text-white/70">
                       {format(parseISO(event.startDate), "MMM d, yyyy")}
                     </td>
                     <td className="px-4 py-3">
@@ -106,7 +106,7 @@ export function AdminEventsTable({ events }: { events: EventDTO[] }) {
                       <div className="flex gap-2">
                         <Link
                           href={`/admin/events/${event.id}/edit`}
-                          className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                          className="inline-flex h-8 items-center gap-2 rounded-lg border border-usc-border bg-white dark:bg-[#2A2724] px-3 text-xs font-bold text-usc-charcoal dark:text-[#F2EDE6] hover:bg-usc-gold-wash dark:hover:bg-white/5"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
@@ -129,7 +129,7 @@ export function AdminEventsTable({ events }: { events: EventDTO[] }) {
           </table>
         </div>
       </div>
-      <p className="text-sm text-slate-500">{filtered.length} event(s) shown</p>
+      <p className="text-sm text-usc-muted">{filtered.length} event(s) shown</p>
     </div>
   );
 }

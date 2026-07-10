@@ -13,6 +13,7 @@ import { CATEGORY_META, CATEGORIES, AY_MONTHS } from "@/lib/constants";
 import { CategoryBadge } from "./category-badge";
 import { StatusBadge } from "./status-badge";
 import { EventModal } from "./event-modal";
+import { DayEventsModal } from "./day-events-modal";
 import { NoticeBanner, CategoryLegend } from "./category-legend";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ export function CalendarView({
   const [organization, setOrganization] = useState(initialOrg);
   const [location, setLocation] = useState("all");
   const [selectedEvent, setSelectedEvent] = useState<EventDTO | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
   useEffect(() => {
     setOrganization(initialOrg);
@@ -65,6 +67,13 @@ export function CalendarView({
     const monthKey = format(currentMonth, "yyyy-MM");
     return filterEvents(filtered, { month: monthKey });
   }, [filtered, currentMonth]);
+
+  const selectedDayEvents = useMemo(() => {
+    if (!selectedDay) return [];
+    return filtered
+      .filter((e) => eventOccursOnDate(e, selectedDay))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [filtered, selectedDay]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
@@ -126,18 +135,68 @@ export function CalendarView({
               const isToday = isSameDay(day, new Date());
               const isHoliday = dayEvents.some((e) => e.category === "National Holiday");
               return (
-                <div key={day.toISOString()} className={cn("min-h-[120px] border-b border-r border-usc-border/50 p-1.5", !inMonth && "opacity-45", isHoliday && "bg-usc-rose-wash/40")}>
-                  <div className={cn("mb-1 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold", isToday ? "bg-usc-gold text-usc-black" : "text-usc-charcoal")}>{format(day, "d")}</div>
+                <div
+                  key={day.toISOString()}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => dayEvents.length > 0 && setSelectedDay(day)}
+                  onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && dayEvents.length > 0) {
+                      e.preventDefault();
+                      setSelectedDay(day);
+                    }
+                  }}
+                  className={cn(
+                    "min-h-[120px] border-b border-r border-usc-border/50 p-1.5 transition",
+                    !inMonth && "opacity-45",
+                    isHoliday && "bg-usc-rose-wash/40",
+                    dayEvents.length > 0 && "cursor-pointer hover:bg-usc-gold-wash/40 dark:hover:bg-usc-gold/5"
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (dayEvents.length > 0) setSelectedDay(day);
+                    }}
+                    className={cn(
+                      "mb-1 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition",
+                      isToday ? "bg-usc-gold text-usc-black" : "text-usc-charcoal hover:bg-usc-gold/20",
+                      dayEvents.length > 0 && "ring-1 ring-transparent hover:ring-usc-gold/40"
+                    )}
+                    aria-label={`View all events on ${format(day, "MMMM d, yyyy")}`}
+                  >
+                    {format(day, "d")}
+                  </button>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 3).map((event) => {
                       const meta = CATEGORY_META[event.category];
                       return (
-                        <button key={event.id} onClick={() => setSelectedEvent(event)} className="calendar-pill block w-full truncate px-1.5 py-0.5 text-left text-[10px] hover:opacity-80" style={{ backgroundColor: meta?.color, color: meta?.textColor }}>
+                        <button
+                          key={event.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEvent(event);
+                          }}
+                          className="calendar-pill block w-full truncate px-1.5 py-0.5 text-left text-[10px] hover:opacity-80"
+                          style={{ backgroundColor: meta?.color, color: meta?.textColor }}
+                        >
                           {event.title}
                         </button>
                       );
                     })}
-                    {dayEvents.length > 3 && <p className="text-[10px] text-usc-muted px-1">+{dayEvents.length - 3} more</p>}
+                    {dayEvents.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDay(day);
+                        }}
+                        className="text-[10px] font-bold text-usc-gold-dark dark:text-usc-gold px-1 hover:underline"
+                      >
+                        +{dayEvents.length - 3} more
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -169,7 +228,22 @@ export function CalendarView({
       )}
 
       <CategoryLegend />
-      <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      {selectedDay && !selectedEvent && (
+        <DayEventsModal
+          day={selectedDay}
+          events={selectedDayEvents}
+          onClose={() => setSelectedDay(null)}
+          onSelectEvent={(event) => setSelectedEvent(event)}
+        />
+      )}
+      <EventModal
+        event={selectedEvent}
+        onBack={selectedDay && selectedEvent ? () => setSelectedEvent(null) : undefined}
+        onClose={() => {
+          setSelectedEvent(null);
+          setSelectedDay(null);
+        }}
+      />
     </div>
   );
 }

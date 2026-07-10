@@ -1,17 +1,36 @@
-import { AdminNav } from "@/components/admin/admin-nav";
-import { EventForm } from "@/components/events/event-form";
+export const dynamic = "force-dynamic";
 
-export default function NewEventPage() {
+import { AdminFormPageClient } from "@/components/pages/admin-form-page-client";
+import { EventForm } from "@/components/events/event-form";
+import { getEvents } from "@/lib/queries";
+import { getOrganizations } from "@/lib/organizations";
+import { detectConflicts } from "@/lib/conflicts";
+
+export default async function NewEventPage() {
+  let eventCount = 0;
+  let orgCount = 0;
+  let conflictCount = 0;
+
+  try {
+    const [events, orgs] = await Promise.all([getEvents(), getOrganizations()]);
+    eventCount = events.length;
+    orgCount = orgs.length;
+    conflictCount = detectConflicts(events).length;
+  } catch {
+    // Database not configured
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-[#1e3a5f] px-4 py-4 text-white sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#c9a227]">Administrator</p>
-        <p className="text-lg font-semibold">Add New Event</p>
-      </header>
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <AdminNav />
-        <EventForm mode="create" />
-      </main>
-    </div>
+    <AdminFormPageClient
+      title="Add new event"
+      subtitle="Create a calendar entry for an organization or council."
+      backHref="/admin/events"
+      backLabel="Back to events"
+      eventCount={eventCount}
+      orgCount={orgCount}
+      conflictCount={conflictCount}
+    >
+      <EventForm mode="create" />
+    </AdminFormPageClient>
   );
 }

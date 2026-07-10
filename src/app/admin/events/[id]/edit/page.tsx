@@ -1,9 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
-import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminFormPageClient } from "@/components/pages/admin-form-page-client";
 import { EventForm } from "@/components/events/event-form";
-import { getEventById } from "@/lib/queries";
+import { getEventById, getEvents } from "@/lib/queries";
+import { getOrganizations } from "@/lib/organizations";
+import { detectConflicts } from "@/lib/conflicts";
 import type { EventFormData } from "@/actions/events";
 
 export default async function EditEventPage({
@@ -14,6 +16,19 @@ export default async function EditEventPage({
   const { id } = await params;
   const event = await getEventById(id);
   if (!event) notFound();
+
+  let eventCount = 0;
+  let orgCount = 0;
+  let conflictCount = 0;
+
+  try {
+    const [events, orgs] = await Promise.all([getEvents(), getOrganizations()]);
+    eventCount = events.length;
+    orgCount = orgs.length;
+    conflictCount = detectConflicts(events).length;
+  } catch {
+    // Database not configured
+  }
 
   const initialData: EventFormData = {
     title: event.title,
@@ -36,15 +51,16 @@ export default async function EditEventPage({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-[#1e3a5f] px-4 py-4 text-white sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#c9a227]">Administrator</p>
-        <p className="text-lg font-semibold">Edit Event</p>
-      </header>
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <AdminNav />
-        <EventForm mode="edit" eventId={id} initialData={initialData} />
-      </main>
-    </div>
+    <AdminFormPageClient
+      title="Edit event"
+      subtitle={event.title}
+      backHref="/admin/events"
+      backLabel="Back to events"
+      eventCount={eventCount}
+      orgCount={orgCount}
+      conflictCount={conflictCount}
+    >
+      <EventForm mode="edit" eventId={id} initialData={initialData} />
+    </AdminFormPageClient>
   );
 }
