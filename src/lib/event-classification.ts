@@ -50,7 +50,7 @@ const SLDP_REQUIRED =
   /\bsldp\b.*(required|mandatory|all officers|all members)/i;
 
 const BROAD_VENUE =
-  /^(tba|tbd|to be announced|to be determined|not specified|n\/a|online|facebook page|university-?wide|wvsu grounds|multiple locations?|various locations?|campus-?wide)$/i;
+  /^(tba|tbd|to be announced|to be determined|not specified|n\/a|na|online|on-?line|facebook page|university-?wide|wvsu grounds|multiple locations?|various locations?|campus-?wide|pending|undecided|-)$/i;
 
 const VENUE_ALIASES: Record<string, string> = {
   "com gym": "wvsu com gym",
@@ -80,7 +80,10 @@ function parseEventMonth(event: Pick<EventDTO, "startDate" | "endDate">): {
 export function isBroadVenue(location: string): boolean {
   const trimmed = location.trim();
   if (!trimmed) return true;
-  return BROAD_VENUE.test(trimmed);
+  if (BROAD_VENUE.test(trimmed)) return true;
+  // Prefix forms: "Venue: TBA", "Location - TBD"
+  if (/^(venue|location)\s*[:\-]\s*(tba|tbd|n\/a|online|pending)/i.test(trimmed)) return true;
+  return false;
 }
 
 export function normalizeVenue(location: string): string {

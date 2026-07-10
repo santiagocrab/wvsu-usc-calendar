@@ -132,12 +132,17 @@ function venueConflictPossible(a: EventDTO, b: EventDTO): boolean {
 }
 
 /** Both venues are TBA/TBD/unspecified — never treat as the same venue. */
-function bothVenuesUnconfirmed(a: EventDTO, b: EventDTO): boolean {
+export function bothVenuesUnconfirmed(a: EventDTO, b: EventDTO): boolean {
   const venueA = a.venueNormalized || normalizeVenue(a.location);
   const venueB = b.venueNormalized || normalizeVenue(b.location);
   const broadA = !venueA || isBroadVenue(a.location);
   const broadB = !venueB || isBroadVenue(b.location);
   return broadA && broadB;
+}
+
+/** Either event has TBA/TBD/unspecified venue — cannot confirm scheduling conflict without times. */
+export function eitherVenueUnconfirmed(a: EventDTO, b: EventDTO): boolean {
+  return isBroadVenue(a.location) || isBroadVenue(b.location);
 }
 
 function sameHost(a: EventDTO, b: EventDTO): boolean {
@@ -245,6 +250,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
   const timeOverlap = timesOverlap(a, b);
   const sameVenue = venueConflictPossible(a, b);
   const bothTba = bothVenuesUnconfirmed(a, b);
+  const anyVenueTba = eitherVenueUnconfirmed(a, b);
 
   const hostMatch = sameHost(a, b);
   const participantMatch = sameParticipants(a, b);
@@ -273,7 +279,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
       recommendation: "Remove or merge duplicate records.",
     });
   } else if (
-    !bothTba &&
+    !anyVenueTba &&
     hostMatch &&
     normalizeTitle(a.title).slice(0, 24) === normalizeTitle(b.title).slice(0, 24) &&
     sameCalendarDay(a, b)
@@ -298,8 +304,8 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
     return candidates;
   }
 
-  // Both TBA: not a venue conflict. Without confirmed overlapping times, stop here.
-  if (bothTba && timeOverlap !== true) {
+  // TBA on either side: no conflict without confirmed overlapping times.
+  if (anyVenueTba && timeOverlap !== true) {
     return candidates;
   }
 
@@ -338,7 +344,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
   }
 
   // Same host conflicts
-  if (hostMatch && !onlineOnlyPair && (!bothTba || timeOverlap === true)) {
+  if (hostMatch && !onlineOnlyPair && (!anyVenueTba || timeOverlap === true)) {
     if (timeOverlap === true) {
       candidates.push({
         conflictType: "same_host_overlapping_time",
@@ -346,7 +352,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
         reason: "Same host cannot be in two places at once at overlapping times.",
         recommendation: "Adjust schedule or confirm different teams handle each activity.",
       });
-    } else if (!bothTba && timeOverlap === null && sameCalendarDay(a, b)) {
+    } else if (!anyVenueTba && timeOverlap === null && sameCalendarDay(a, b)) {
       candidates.push({
         conflictType: "same_host_time_missing",
         severity: "medium",
@@ -357,7 +363,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
   }
 
   // Participant conflicts (not broad all-students unless times overlap)
-  if (participantMatch && (!bothTba || timeOverlap === true)) {
+  if (participantMatch && (!anyVenueTba || timeOverlap === true)) {
     const specificGroup =
       (a.targetGroupNormalized || normalizeTargetGroup(a.targetParticipants)) !== "all students";
     if (timeOverlap === true && (specificGroup || a.participationRequired || b.participationRequired)) {
@@ -367,7 +373,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
         reason: "Both events target the same participants at overlapping times.",
         recommendation: "Confirm whether participants can attend both or reschedule.",
       });
-    } else if (!bothTba && timeOverlap === null && sameCalendarDay(a, b) && specificGroup) {
+    } else if (!anyVenueTba && timeOverlap === null && sameCalendarDay(a, b) && specificGroup) {
       candidates.push({
         conflictType: "participant_time_missing",
         severity: "medium",
@@ -404,7 +410,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
     holiday &&
     nonHoliday &&
     nonHoliday.category.startsWith("Org/CSC") &&
-    !bothVenuesUnconfirmed(nonHoliday, holiday) &&
+    !anyVenueTba &&
     isPhysicalDelivery(nonHoliday)
   ) {
     candidates.push({
@@ -416,7 +422,7 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
   }
 
   // Low notice
-  if ((isLowNotice(a) || isLowNotice(b)) && !bothTba) {
+  if ((isLowNotice(a) || isLowNotice(b)) && !anyVenueTba) {
     if (sameCalendarDay(a, b) && (hostMatch || sameVenue || participantMatch)) {
       candidates.push({
         conflictType: "low_notice",
@@ -428,6 +434,15 @@ export function evaluatePair(a: EventDTO, b: EventDTO): ConflictCandidate[] {
   }
 
   return candidates;
+}
+
+/** Stale DB rows: TBA/unconfirmed venue with no confirmed time overlap. */
+export function isStaleTbaConflict(conflict: Pick<Conflict, "type" | "events">): boolean {
+  const [a, b] = conflict.events;
+  if (!a || !b) return false;
+  if (!eitherVenueUnconfirmed(a, b)) return false;
+  if (conflict.type === "duplicate_event") return false;
+  return timesOverlap(a, b) !== true;
 }
 
 export function detectConflicts(events: EventDTO[]): Conflict[] {

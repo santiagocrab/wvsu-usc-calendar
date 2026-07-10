@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { recalculateConflicts } from "@/lib/conflict-queries";
+import { recalculateConflicts, pruneStaleTbaConflicts } from "@/lib/conflict-queries";
 
 async function requireAdmin() {
   const authed = await isAdminAuthenticated();
@@ -114,6 +114,7 @@ export async function recalculateConflictsAction(): Promise<{
 }> {
   try {
     await requireAdmin();
+    await pruneStaleTbaConflicts();
     const stats = await recalculateConflicts();
     revalidatePath("/");
     revalidatePath("/calendar");
