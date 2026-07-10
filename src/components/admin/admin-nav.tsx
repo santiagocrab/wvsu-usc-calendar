@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, Plus, List, AlertTriangle, Calendar } from "lucide-react";
+import { LogOut, Plus, List, AlertTriangle, Building2 } from "lucide-react";
 import { logoutAction } from "@/actions/events";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,18 +42,18 @@ export function AdminNav() {
           Manage Events
         </Link>
         <Link
+          href="/admin/organizations"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          <Building2 className="h-4 w-4" />
+          Organizations
+        </Link>
+        <Link
           href="/conflicts"
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           <AlertTriangle className="h-4 w-4" />
           Conflicts
-        </Link>
-        <Link
-          href="/calendar"
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          <Calendar className="h-4 w-4" />
-          Public View
         </Link>
         <Button variant="outline" onClick={handleLogout} disabled={isPending}>
           <LogOut className="h-4 w-4" />

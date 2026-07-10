@@ -86,7 +86,22 @@ async function main() {
     process.stdout.write(`\rProcessed ${Math.min(i + batchSize, events.length)} / ${events.length}`);
   }
 
-  console.log(`\nSeed complete: ${created} created, ${skipped} already existed (skipped).`);
+  console.log(`\nEvents: ${created} created, ${skipped} already existed (skipped).`);
+
+  // Seed organizations (insert-only by name)
+  const orgsPath = join(process.cwd(), "prisma", "organizations.json");
+  const orgsRaw = readFileSync(orgsPath, "utf-8");
+  const orgs: { name: string; acronym: string }[] = JSON.parse(orgsRaw);
+  console.log(`\nSeeding ${orgs.length} organizations...`);
+  let orgCreated = 0;
+  let orgSkipped = 0;
+  for (const org of orgs) {
+    const existing = await prisma.organization.findUnique({ where: { name: org.name } });
+    if (existing) { orgSkipped++; continue; }
+    await prisma.organization.create({ data: { name: org.name, acronym: org.acronym } });
+    orgCreated++;
+  }
+  console.log(`Organizations: ${orgCreated} created, ${orgSkipped} already existed (skipped).`);
 }
 
 main()

@@ -1,7 +1,6 @@
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import type { Event } from "@/generated/prisma/client";
-import type { Category } from "./constants";
-import { CATEGORY_COLORS } from "./constants";
+import { CATEGORY_META } from "./constants";
 
 export type EventDTO = {
   id: string;
@@ -70,7 +69,8 @@ export function formatEventTime(startTime: string, endTime: string): string {
 }
 
 export function getCategoryStyle(category: string) {
-  return CATEGORY_COLORS[category as Category] ?? CATEGORY_COLORS["USC Events"];
+  const meta = CATEGORY_META[category] ?? CATEGORY_META["USC Events"];
+  return { bg: meta.bgLight, text: meta.textColor, border: meta.color, dot: meta.color };
 }
 
 export function eventOccursOnDate(event: EventDTO, date: Date): boolean {

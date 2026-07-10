@@ -4,10 +4,6 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import { loginAction } from "@/actions/events";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function LoginForm() {
   const router = useRouter();
@@ -22,8 +18,7 @@ export function LoginForm() {
     startTransition(async () => {
       const result = await loginAction(password);
       if (result.success) {
-        const from = searchParams.get("from") || "/admin";
-        router.push(from);
+        router.push(searchParams.get("from") || "/admin");
         router.refresh();
       } else {
         setError(result.error ?? "Login failed.");
@@ -32,37 +27,35 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f]">
-          <Lock className="h-6 w-6" />
+    <div className="usc-card p-6 dark:bg-[#252220]">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-usc-gold flex items-center justify-center">
+          <Lock size={18} className="text-usc-black" />
         </div>
-        <CardTitle>Administrator Login</CardTitle>
-        <p className="text-sm text-slate-500">Enter the admin password to manage calendar events.</p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoFocus
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Signing in..." : "Login"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <div>
+          <h2 className="font-extrabold text-usc-black dark:text-[#F5F0E8]">Sign in</h2>
+          <p className="text-xs text-usc-muted">Enter admin password</p>
+        </div>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 p-3 rounded-xl">{error}</p>}
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          required
+          autoFocus
+          className="w-full px-4 py-3 rounded-xl border border-usc-border bg-white dark:bg-[#2A2724] dark:text-[#F2EDE6] font-medium"
+        />
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full py-3 rounded-full bg-usc-gold text-usc-black font-bold hover:bg-usc-gold-dark disabled:opacity-50 transition"
+        >
+          {isPending ? "Signing in…" : "Login"}
+        </button>
+      </form>
+    </div>
   );
 }

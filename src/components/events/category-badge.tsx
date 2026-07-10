@@ -1,20 +1,13 @@
-import { cn } from "@/lib/utils";
-import { getCategoryStyle } from "@/lib/events";
+import { CATEGORY_META } from "@/lib/constants";
 
-export function CategoryBadge({ category, className }: { category: string; className?: string }) {
-  const style = getCategoryStyle(category);
+export function CategoryBadge({ category, className = "" }: { category: string; className?: string }) {
+  const meta = CATEGORY_META[category] ?? CATEGORY_META["USC Events"];
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        style.bg,
-        style.text,
-        style.border,
-        className
-      )}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}
+      style={{ backgroundColor: meta.color, color: meta.textColor }}
     >
-      <span className={cn("h-2 w-2 rounded-full", style.dot)} />
-      {category}
+      {meta.short}
     </span>
   );
 }

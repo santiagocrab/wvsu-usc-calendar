@@ -1,23 +1,29 @@
 export const dynamic = "force-dynamic";
 
-import { SiteHeader } from "@/components/layout/site-header";
-import { CalendarView } from "@/components/events/calendar-view";
+import { Suspense } from "react";
 import { getEvents } from "@/lib/queries";
+import { getOrganizations } from "@/lib/organizations";
+import { detectConflicts } from "@/lib/conflicts";
+import { CalendarPageClient } from "@/components/pages/calendar-page-client";
 
 export default async function CalendarPage() {
   let events: Awaited<ReturnType<typeof getEvents>> = [];
+  let orgs: Awaited<ReturnType<typeof getOrganizations>> = [];
+  let conflictCount = 0;
+
   try {
-    events = await getEvents();
-  } catch {
-    // Database not configured
-  }
+    [events, orgs] = await Promise.all([getEvents(), getOrganizations()]);
+    conflictCount = detectConflicts(events).length;
+  } catch { /* db */ }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <SiteHeader />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <CalendarView events={events} />
-      </main>
-    </div>
+    <Suspense>
+      <CalendarPageClient
+        events={events}
+        organizations={orgs}
+        orgCount={orgs.length}
+        conflictCount={conflictCount}
+      />
+    </Suspense>
   );
 }
