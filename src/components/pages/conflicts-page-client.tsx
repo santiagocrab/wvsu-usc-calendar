@@ -45,6 +45,8 @@ export function ConflictsPageClient({
                 <span className="text-xs text-usc-muted uppercase">{conflict.type.replace(/_/g, " ")}</span>
               </div>
               <p className="font-bold text-usc-black dark:text-[#F5F0E8]">{conflict.message}</p>
+              <p className="text-sm text-usc-muted mt-2"><span className="font-semibold">Why:</span> {conflict.reason}</p>
+              <p className="text-sm text-usc-charcoal dark:text-white/70 mt-1"><span className="font-semibold">Action:</span> {conflict.recommendedAction}</p>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {conflict.events.map((event) => (
                   <div key={event.id} className="p-4 rounded-xl bg-white dark:bg-[#2A2724] border border-usc-border">

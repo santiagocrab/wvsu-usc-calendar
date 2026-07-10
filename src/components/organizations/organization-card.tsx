@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Calendar, Building2, MapPin } from "lucide-react";
 import type { EventDTO } from "@/lib/events";
+import { eventMatchesOrg } from "@/lib/org-matching";
 import { format, parseISO } from "date-fns";
 
 export type OrgStats = {
@@ -73,11 +74,7 @@ export function buildOrgStats(
 ): OrgStats[] {
   const today = new Date().toISOString().slice(0, 10);
   return organizations.map((org) => {
-    const orgEvents = events.filter(
-      (e) => e.organization === org.name || e.host === org.name ||
-        e.organization.toLowerCase().includes(org.name.toLowerCase()) ||
-        e.host.toLowerCase().includes(org.name.toLowerCase())
-    );
+    const orgEvents = events.filter((e) => eventMatchesOrg(e, org));
     const upcoming = orgEvents
       .filter((e) => e.startDate >= today)
       .sort((a, b) => a.startDate.localeCompare(b.startDate))[0] ?? null;

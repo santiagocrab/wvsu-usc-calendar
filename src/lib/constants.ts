@@ -3,9 +3,9 @@ export const CATEGORY_META: Record<
   { color: string; textColor: string; bgLight: string; short: string }
 > = {
   "National Holiday": { color: "#C00000", textColor: "#FFFFFF", bgLight: "#FEE2E2", short: "Holiday" },
-  "WVSU Calendar": { color: "#2563EB", textColor: "#FFFFFF", bgLight: "#DBEAFE", short: "WVSU" },
-  "USC Events": { color: "#C9953A", textColor: "#3A3632", bgLight: "#F9F3E8", short: "USC" },
-  "Org/CSC Calendared Event": { color: "#EA580C", textColor: "#FFFFFF", bgLight: "#FFEDD5", short: "Calendared" },
+  "WVSU Calendar": { color: "#FFD700", textColor: "#3A3632", bgLight: "#FEF9C3", short: "WVSU" },
+  "USC Events": { color: "#2563EB", textColor: "#FFFFFF", bgLight: "#DBEAFE", short: "USC" },
+  "Org/CSC Calendared Event": { color: "#800000", textColor: "#FFFFFF", bgLight: "#FEE2E2", short: "Calendared" },
   "Org/CSC Proposed Event": { color: "#00B050", textColor: "#FFFFFF", bgLight: "#DCFCE7", short: "Proposed" },
   "Org/CSC Outreach Programs": { color: "#C00080", textColor: "#FFFFFF", bgLight: "#FCE7F6", short: "Outreach" },
 };
