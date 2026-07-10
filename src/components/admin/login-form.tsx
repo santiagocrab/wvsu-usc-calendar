@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import { loginAction } from "@/actions/events";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -16,12 +15,9 @@ export function LoginForm() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await loginAction(password);
-      if (result.success) {
-        router.push(searchParams.get("from") || "/admin");
-        router.refresh();
-      } else {
-        setError(result.error ?? "Login failed.");
+      const result = await loginAction(password, searchParams.get("from"));
+      if (result?.error) {
+        setError(result.error);
       }
     });
   }

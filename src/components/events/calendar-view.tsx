@@ -54,8 +54,8 @@ export function CalendarView({
       search, category,
       organization: organization === "all" ? undefined : organization,
       location: location === "all" ? undefined : location,
-    }, organizations),
-    [events, search, category, organization, location, organizations]
+    }),
+    [events, search, category, organization, location]
   );
 
   const monthDays = useMemo(() => {

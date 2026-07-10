@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTransition } from "react";
 import {
   LayoutDashboard, Calendar, AlertTriangle, Building2, Plus, LogOut, ExternalLink,
@@ -38,15 +38,12 @@ export function AdminShell({
   subtitle?: string;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { darkMode, toggleDarkMode } = useTheme();
   const [isPending, startTransition] = useTransition();
 
   function handleLogout() {
     startTransition(async () => {
       await logoutAction();
-      router.push("/admin/login");
-      router.refresh();
     });
   }
 

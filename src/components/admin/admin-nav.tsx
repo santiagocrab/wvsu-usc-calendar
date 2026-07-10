@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogOut, Plus, List, AlertTriangle, Building2 } from "lucide-react";
 import { logoutAction } from "@/actions/events";
@@ -9,14 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function AdminNav() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function handleLogout() {
     startTransition(async () => {
       await logoutAction();
-      router.push("/admin/login");
-      router.refresh();
     });
   }
 

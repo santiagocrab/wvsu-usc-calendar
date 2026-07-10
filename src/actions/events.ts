@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { isAdminAuthenticated, setAdminSession, clearAdminSession, verifyPassword } from "@/lib/auth";
 import { generateEventId } from "@/lib/events";
@@ -48,7 +49,10 @@ async function requireAdmin() {
   if (!authed) throw new Error("Unauthorized");
 }
 
-export async function loginAction(password: string): Promise<{ success: boolean; error?: string }> {
+export async function loginAction(
+  password: string,
+  redirectTo?: string | null
+): Promise<{ success: false; error: string } | void> {
   if (!process.env.ADMIN_PASSWORD) {
     return { success: false, error: "Admin password is not configured." };
   }
@@ -56,12 +60,17 @@ export async function loginAction(password: string): Promise<{ success: boolean;
     return { success: false, error: "Incorrect password. Please try again." };
   }
   await setAdminSession();
-  return { success: true };
+  const destination =
+    redirectTo && redirectTo.startsWith("/admin") && redirectTo !== "/admin/login"
+      ? redirectTo
+      : "/admin";
+  redirect(destination);
 }
 
 export async function logoutAction(): Promise<void> {
   await clearAdminSession();
   revalidatePath("/admin");
+  redirect("/admin/login");
 }
 
 export async function createEvent(data: EventFormData): Promise<{ success: boolean; error?: string; id?: string }> {
