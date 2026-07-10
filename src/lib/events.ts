@@ -1,7 +1,31 @@
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import type { Event } from "@/generated/prisma/client";
 import { CATEGORY_META } from "./constants";
-import { eventMatchesOrg, findOrgByName, type OrgRef } from "./org-matching";
+
+export type DateType = "exact" | "date_range" | "recurring" | "month_only" | "ongoing";
+export type DeliveryMode =
+  | "onsite"
+  | "online_synchronous"
+  | "online_asynchronous"
+  | "hybrid"
+  | "unspecified";
+export type RecordType =
+  | "event"
+  | "observance"
+  | "holiday"
+  | "academic_period"
+  | "publication"
+  | "preparation"
+  | "coverage";
+export type RelationType =
+  | "coverage"
+  | "support"
+  | "booth"
+  | "publication"
+  | "preparation"
+  | "component"
+  | "companion"
+  | "independent";
 
 export type EventDTO = {
   id: string;
@@ -22,9 +46,24 @@ export type EventDTO = {
   contactPerson: string;
   sourceFile: string;
   remarks: string;
+  isMajorBlockingEvent: boolean;
+  conflictEligible: boolean;
+  dateType: DateType;
+  deliveryMode: DeliveryMode;
+  recordType: RecordType;
+  parentEventId: string | null;
+  relationType: RelationType;
+  participationRequired: boolean;
+  venueNormalized: string;
+  hostNormalized: string;
+  targetGroupNormalized: string;
   createdAt: string;
   updatedAt: string;
 };
+
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
 export function serializeEvent(event: Event): EventDTO {
   return {
@@ -35,8 +74,8 @@ export function serializeEvent(event: Event): EventDTO {
     organization: event.organization,
     eventType: event.eventType,
     status: event.status,
-    startDate: format(event.startDate, "yyyy-MM-dd"),
-    endDate: format(event.endDate, "yyyy-MM-dd"),
+    startDate: formatDate(event.startDate),
+    endDate: formatDate(event.endDate),
     startTime: event.startTime,
     endTime: event.endTime,
     location: event.location,
@@ -46,6 +85,17 @@ export function serializeEvent(event: Event): EventDTO {
     contactPerson: event.contactPerson,
     sourceFile: event.sourceFile,
     remarks: event.remarks,
+    isMajorBlockingEvent: event.isMajorBlockingEvent,
+    conflictEligible: event.conflictEligible,
+    dateType: event.dateType as DateType,
+    deliveryMode: event.deliveryMode as DeliveryMode,
+    recordType: event.recordType as RecordType,
+    parentEventId: event.parentEventId,
+    relationType: event.relationType as RelationType,
+    participationRequired: event.participationRequired,
+    venueNormalized: event.venueNormalized,
+    hostNormalized: event.hostNormalized,
+    targetGroupNormalized: event.targetGroupNormalized,
     createdAt: event.createdAt.toISOString(),
     updatedAt: event.updatedAt.toISOString(),
   };
@@ -88,8 +138,7 @@ export function filterEvents(
     location?: string;
     status?: string;
     month?: string;
-  },
-  organizations?: OrgRef[]
+  }
 ): EventDTO[] {
   const search = filters.search?.toLowerCase().trim();
   const month = filters.month;
@@ -115,19 +164,12 @@ export function filterEvents(
       return false;
     }
     if (filters.organization && filters.organization !== "all") {
-      const orgRef = organizations
-        ? findOrgByName(organizations, filters.organization)
-        : undefined;
-      if (orgRef) {
-        if (!eventMatchesOrg(event, orgRef)) return false;
-      } else {
-        const org = filters.organization.toLowerCase();
-        if (
-          !event.organization.toLowerCase().includes(org) &&
-          !event.host.toLowerCase().includes(org)
-        ) {
-          return false;
-        }
+      const org = filters.organization.toLowerCase();
+      if (
+        !event.organization.toLowerCase().includes(org) &&
+        !event.host.toLowerCase().includes(org)
+      ) {
+        return false;
       }
     }
     if (filters.location && filters.location !== "all") {

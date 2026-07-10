@@ -13,6 +13,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:audit": "tsx prisma/apply-official-audit.ts",
     "db:import-revisions": "tsx prisma/import-revisions.ts",
+    "db:backfill-events": "tsx prisma/backfill-event-fields.ts",
+    "db:recalculate-conflicts": "tsx prisma/recalculate-conflicts.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
